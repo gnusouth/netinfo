@@ -1,4 +1,5 @@
 known_devices
-*.html
 userauth.py
-router.sh
+junk/
+__pycache__
+netinfo

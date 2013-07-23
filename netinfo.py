@@ -43,9 +43,49 @@ def get_url_data(url):
 
 def users(known_devices):
 	"Print a list of online users and their IP addresses"
+	
+	# Download data
 	ip_table = get_url_data('http://192.168.1.254/status/arp.html')
+	
+	## Extract the device info from the HTML ##
 	soup = BeautifulSoup(ip_table)
-	print(soup.prettify())
+
+	# Get the two 'Wired' and 'Wireless' tables
+	tables = soup.findAll("table", "cfgframe")
+	if (len(tables) != 2):
+		print("Error parsing ARP table")
+	wired = tables[0];
+	wired = wired.findAll("tr")
+	wireless = tables[1];
+	wireless = wireless.findAll("tr")
+	del tables
+
+	# Extract the list of online devices
+	e_online = {} # Ethernet, online
+	w_online = {}
+
+	if (len(wired) > 2):
+		for device in wired[2:]:
+			info = device.findAll("td")
+			ip = info[0].string
+			mac = info[1].string
+			e_online[mac] = ip
+
+	if (len(wireless) > 2):
+		for device in wireless[2:]:
+			info = device.findAll("td")
+			ip = info[0].string
+			mac = info[1].string
+			w_online[mac] = ip
+
+	# Print status info
+	for mac in e_online:
+		name = "Unknown device"
+		if mac in known_devices:
+			name = known_devices[mac]
+		print("%s connected at %s" % (name, e_online[mac]))
+	
+
 
 def known(known_devices):
 	"Print a list of known devices"
