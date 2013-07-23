@@ -64,6 +64,7 @@ def users(known_devices):
 	e_online = {} # Ethernet, online
 	w_online = {}
 
+	# TODO: Functionise this
 	if (len(wired) > 2):
 		for device in wired[2:]:
 			info = device.findAll("td")
@@ -79,13 +80,19 @@ def users(known_devices):
 			w_online[mac] = ip
 
 	# Print status info
+	print("--- Wired Devices ---")
 	for mac in e_online:
-		name = "Unknown device"
+		name = mac
 		if mac in known_devices:
 			name = known_devices[mac]
-		print("%s connected at %s" % (name, e_online[mac]))
-	
+		print("%s @ %s" % (name, e_online[mac]))
 
+	print("--- Wireless Devices ---")
+	for mac in w_online:
+		name = mac
+		if mac in known_devices:
+			name = known_devices[mac]
+		print("%s @ %s" % (name, e_online[mac]))
 
 def known(known_devices):
 	"Print a list of known devices"
