@@ -1,27 +1,45 @@
 #!/usr/bin/env python3
 
 import sys
+import os.path
 import urllib.request
 from bs4 import BeautifulSoup
 
-import netinfo
 import userauth
+
+# ------------- #
+# ~~ Globals ~~ #
+# ------------- #
+
+CONFIG_DIR = os.path.expanduser("~/.config/netinfo/")
 
 # ----------------------- #
 # ~~ Backend functions ~~ #
 # ----------------------- #
 
+def init_config():
+	"Create the config folder if it doesn't already exist"
+	
+	if not os.path.isdir(CONFIG_DIR):
+		print("First run, creating config dir in ~/.config/netinfo")
+		os.makedirs(CONFIG_DIR)
+
 def read_known_dev():
 	"Reads the list of known devices from file and returns a dictionary keyed by MAC addresses"
 	known_devices = {}
-	file = open("known_devices", "r")
-	for l in file:
-		pair = l.rstrip().split('|')
-		if (len(pair) != 2):
-			print("Malformed known_devices file")
-		else:
-			known_devices[pair[0].rstrip()] = pair[1].lstrip()
-	file.close()	
+	
+	path = CONFIG_DIR + "known_devices"
+
+	if (os.path.isfile(path)):
+		file = open(path, "r")
+		for l in file:
+			pair = l.rstrip().split('|')
+			if (len(pair) != 2):
+				print("Malformed known_devices file")
+			else:
+				known_devices[pair[0].rstrip()] = pair[1].lstrip()
+		file.close()
+
 	return known_devices	
 
 def init_url_opener():
@@ -119,7 +137,7 @@ def add(known_devices):
 	desc = input("Description: ")
 
 	# Write to file
-	file = open("known_devices", "a")
+	file = open(CONFIG_DIR + "known_devices", "a")
 	string = "%s | %s\n" % (mac, desc)
 	file.write(string)
 	file.close()
@@ -130,10 +148,13 @@ def help(null):
 
 def run(fname):
 	"Run a function from a string function name"
-	function = getattr(netinfo, fname, netinfo.help)
+	this_module = sys.modules[__name__]
+	function = getattr(this_module, fname, this_module.help)
 	function(known_devices)
 
 if __name__ == "__main__":
+	init_config()
+
 	# Run the given command, or display usage information if none is given
 	if (len(sys.argv) > 1):
 		# Initial setup
