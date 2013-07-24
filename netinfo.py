@@ -59,14 +59,17 @@ def parse_online_device_html(html_device_list):
 
 	return online_devices
 
-def print_online_dev(online_devices, header=""):
-	print(header, ending="")
+def print_online_dev(online_devices, known_devices, header=""):
+	if (len(online_devices) == 0):
+		return
+
+	print(header, end="")
 	
 	for mac in online_devices:
 		name = mac
 		if mac in known_devices:
 			name = known_devices[mac]
-		print("%s @ %s" % (name, e_online[mac]))
+		print("%s @ %s" % (name, online_devices[mac]))
 
 # ------------------------------------ #
 # ~~ Commandline callable functions ~~ #
@@ -98,8 +101,8 @@ def users(known_devices):
 	w_online = parse_online_device_html(wireless[2:])
 
 	# Print results
-	print_online_dev(e_online, "~ Wired Devices ~\n")
-	print_online_dev(w_online, "~ Wireless Devices ~\n")
+	print_online_dev(e_online, known_devices, "~ Wired Devices ~\n")
+	print_online_dev(w_online, known_devices, "~ Wireless Devices ~\n")
 
 def known(known_devices):
 	"Print a list of known devices"
