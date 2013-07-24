@@ -7,6 +7,10 @@ from bs4 import BeautifulSoup
 import netinfo
 import userauth
 
+# ----------------------- #
+# ~~ Backend functions ~~ #
+# ----------------------- #
+
 def read_known_dev():
 	"Reads the list of known devices from file and returns a dictionary keyed by MAC addresses"
 	known_devices = {}
@@ -41,67 +45,74 @@ def get_url_data(url):
 	response = urllib.request.urlopen(url)
 	return response.read()
 
+def parse_online_device_html(html_device_list):
+	"""Convert a list of appropriately formatted table rows to a dictionary
+	of IPs keyed by MAC addresses"""
+	online_devices = {}
+
+	if (len(html_device_list) > 2):
+		for device in html_device_list:
+			info = device.findAll("td")
+			ip = info[0].string
+			mac = info[1].string
+			online_devices[mac] = ip
+
+	return online_devices
+
+def print_online_dev(online_devices, header=""):
+	print(header, ending="")
+	
+	for mac in online_devices:
+		name = mac
+		if mac in known_devices:
+			name = known_devices[mac]
+		print("%s @ %s" % (name, e_online[mac]))
+
+# ------------------------------------ #
+# ~~ Commandline callable functions ~~ #
+# ------------------------------------ #
+
 def users(known_devices):
 	"Print a list of online users and their IP addresses"
 	
 	# Download data
 	ip_table = get_url_data('http://192.168.1.254/status/arp.html')
 	
-	## Extract the device info from the HTML ##
+	# ~~ Extract the device info from the HTML ~~ #
+	
 	soup = BeautifulSoup(ip_table)
 
-	# Get the two 'Wired' and 'Wireless' tables
+	# Get the two 'Wired' and 'Wireless' html tables
 	tables = soup.findAll("table", "cfgframe")
 	if (len(tables) != 2):
 		print("Error parsing ARP table")
+		return
 	wired = tables[0];
-	wired = wired.findAll("tr")
+	wired = wired.findAll("tr") # Convert to list of
 	wireless = tables[1];
 	wireless = wireless.findAll("tr")
 	del tables
 
-	# Extract the list of online devices
-	e_online = {} # Ethernet, online
-	w_online = {}
+	# Parse the lists of online devices (skip the styling rows)
+	e_online = parse_online_device_html(wired[2:])
+	w_online = parse_online_device_html(wireless[2:])
 
-	# TODO: Functionise this
-	if (len(wired) > 2):
-		for device in wired[2:]:
-			info = device.findAll("td")
-			ip = info[0].string
-			mac = info[1].string
-			e_online[mac] = ip
-
-	if (len(wireless) > 2):
-		for device in wireless[2:]:
-			info = device.findAll("td")
-			ip = info[0].string
-			mac = info[1].string
-			w_online[mac] = ip
-
-	# Print status info
-	print("--- Wired Devices ---")
-	for mac in e_online:
-		name = mac
-		if mac in known_devices:
-			name = known_devices[mac]
-		print("%s @ %s" % (name, e_online[mac]))
-
-	print("--- Wireless Devices ---")
-	for mac in w_online:
-		name = mac
-		if mac in known_devices:
-			name = known_devices[mac]
-		print("%s @ %s" % (name, e_online[mac]))
+	# Print results
+	print_online_dev(e_online, "~ Wired Devices ~\n")
+	print_online_dev(w_online, "~ Wireless Devices ~\n")
 
 def known(known_devices):
 	"Print a list of known devices"
+
 	for mac in known_devices:
 		print("%s %s" % (mac, known_devices[mac]))
 
 def add(known_devices):
+	"Add a device to the list of known devices"
+
 	mac = input("MAC address: ") 
 	# TODO: check it's a valid mac
+	# TODO: check for overwrites
 	desc = input("Description: ")
 
 	# Write to file
@@ -111,9 +122,11 @@ def add(known_devices):
 	file.close()
 
 def help(null):
+	"Display usage information"
 	print("Usage: netinfo [known|add|users]")
 
 def run(fname):
+	"Run a function from a string function name"
 	function = getattr(netinfo, fname, netinfo.help)
 	function(known_devices)
 
