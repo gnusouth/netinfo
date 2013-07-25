@@ -2,22 +2,24 @@
 
 import sys
 import os.path
+import re
 import urllib.request
 from bs4 import BeautifulSoup
 
 import userauth
 
-# ------------- #
-# ~~ Globals ~~ #
-# ------------- #
+# ----------------------- #
+# ~~ Globals/constants ~~ #
+# ----------------------- #
 
 CONFIG_DIR = os.path.expanduser("~/.config/netinfo/")
+MAC_REGEX = r"([0-9a-f]{2}:){5}[0-9a-f]{2}$"
 
 # ----------------------- #
 # ~~ Backend functions ~~ #
 # ----------------------- #
 
-def init_config():
+def init_config_file():
 	"Create the config folder if it doesn't already exist"
 	
 	if not os.path.isdir(CONFIG_DIR):
@@ -68,12 +70,11 @@ def parse_online_device_html(html_device_list):
 	of IPs keyed by MAC addresses"""
 	online_devices = {}
 
-	if (len(html_device_list) > 2):
-		for device in html_device_list:
-			info = device.findAll("td")
-			ip = info[0].string
-			mac = info[1].string
-			online_devices[mac] = ip
+	for device in html_device_list:
+		info = device.findAll("td")
+		ip = info[0].string
+		mac = info[1].string.lower()
+		online_devices[mac] = ip
 
 	return online_devices
 
@@ -109,7 +110,7 @@ def users(known_devices):
 		print("Error parsing ARP table")
 		return
 	wired = tables[0];
-	wired = wired.findAll("tr") # Convert to list of
+	wired = wired.findAll("tr")
 	wireless = tables[1];
 	wireless = wireless.findAll("tr")
 	del tables
@@ -124,16 +125,28 @@ def users(known_devices):
 
 def known(known_devices):
 	"Print a list of known devices"
-
 	for mac in known_devices:
 		print("%s %s" % (mac, known_devices[mac]))
 
 def add(known_devices):
 	"Add a device to the list of known devices"
 
-	mac = input("MAC address: ") 
-	# TODO: check it's a valid mac
-	# TODO: check for overwrites
+	mac = input("MAC address: ").lower()
+	
+	# Check it's a valid MAC address
+	valid_mac = re.match(MAC_REGEX, mac)
+	if not valid_mac:
+		print("That MAC address is invalid! Cease this assault to decency at once!")
+		return
+
+	# Check that the MAC address hasn't already been used
+	if mac in known_devices:
+		print("WARNING: A device called `%s` exists for that MAC address" % (known_devices[mac],))
+		response = input("Overwrite? [y/N] ").lower()
+		if response in ("no", "n", ""):
+			print("Not overwritten.")
+			return
+
 	desc = input("Description: ")
 
 	# Write to file
@@ -153,7 +166,7 @@ def run(fname):
 	function(known_devices)
 
 if __name__ == "__main__":
-	init_config()
+	init_config_file()
 
 	# Run the given command, or display usage information if none is given
 	if (len(sys.argv) > 1):
